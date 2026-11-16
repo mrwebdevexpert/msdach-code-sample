@@ -39,10 +39,12 @@ jobs:
             - Edge Functions validate input, never log secrets or personal data, and are tested;
             - visible program texts are German.
             Post each finding as an inline comment with a severity: high, medium or low.
-            Finally write all findings as JSON to claude-review.json:
+            Finally, ALWAYS write the file ./claude-review.json in the repository root – also when
+            there are no findings (then write {"findings":[]}). Format:
             {"findings":[{"severity":"high|medium|low","file":"…","line":0,"summary":"…"}]}
+            If the PR is clean, also post one short PR comment saying what you checked.
           claude_args: >-
-            --allowedTools "Read,Glob,Grep,Write,Task,Bash(git diff:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),mcp__github_inline_comment__create_inline_comment"
+            --allowedTools "Read,Glob,Grep,Write,Task,Bash(git diff:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),mcp__github_inline_comment__create_inline_comment"
 
       - name: Block on open high findings
         run: |
