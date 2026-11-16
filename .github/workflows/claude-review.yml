@@ -21,7 +21,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: anthropics/claude-code-action@v1
+      - id: claude
+        uses: anthropics/claude-code-action@v1
         with:
           # one of the two secrets is enough: API key (Console) or Claude subscription token
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -39,15 +40,23 @@ jobs:
             - Edge Functions validate input, never log secrets or personal data, and are tested;
             - visible program texts are German.
             Post each finding as an inline comment with a severity: high, medium or low.
-            Finally write all findings as JSON to claude-review.json:
-            {"findings":[{"severity":"high|medium|low","file":"…","line":0,"summary":"…"}]}
+            If the PR is clean, post one short PR comment saying what you checked.
+            Return every finding in the structured output (an empty list when the PR is clean).
           claude_args: >-
-            --allowedTools "Read,Glob,Grep,Write,Task,Bash(git diff:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),mcp__github_inline_comment__create_inline_comment"
+            --json-schema '{"type":"object","required":["findings"],"properties":{"findings":{"type":"array","items":{"type":"object","required":["severity","file","summary"],"properties":{"severity":{"type":"string","enum":["high","medium","low"]},"file":{"type":"string"},"line":{"type":"integer"},"summary":{"type":"string"}}}}}}'
+            --allowedTools "Read,Glob,Grep,Task,Bash(git diff:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),mcp__github_inline_comment__create_inline_comment"
 
       - name: Block on open high findings
+        env:
+          STRUCTURED: ${{ steps.claude.outputs.structured_output }}
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
         run: |
-          test -f claude-review.json || { echo "No review output"; exit 1; }
-          high=$(jq '[.findings[] | select(.severity == "high")] | length' claude-review.json)
+          if [ -z "$STRUCTURED" ] || ! jq -e '.findings' <<<"$STRUCTURED" >/dev/null 2>&1; then
+            echo "No structured review output. Last message from Claude:"
+            jq -r '[.[] | select(.type == "result")] | last | .result // empty' "$EXECUTION_FILE" 2>/dev/null | head -40
+            exit 1
+          fi
+          high=$(jq '[.findings[] | select(.severity == "high")] | length' <<<"$STRUCTURED")
           echo "High findings: $high"
-          jq -r '.findings[] | "\(.severity)\t\(.file):\(.line)\t\(.summary)"' claude-review.json
+          jq -r '.findings[] | "\(.severity)\t\(.file):\(.line // 0)\t\(.summary)"' <<<"$STRUCTURED"
           test "$high" -eq 0
