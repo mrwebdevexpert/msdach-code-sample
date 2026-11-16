@@ -1,0 +1,54 @@
+name: CI
+
+# Runs on every pull request and on main. Red = not finished.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guards:
+    name: Guards (migrations immutable, every policy tested)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Applied migrations are never edited
+        if: github.event_name == 'pull_request'
+        run: ./scripts/check_migrations_immutable.sh "origin/${{ github.base_ref }}"
+      - name: Every RLS policy has a pgTAP test
+        run: ./scripts/check_policy_coverage.sh
+
+  edge-functions:
+    name: Edge Functions (fmt, lint, type check, Deno tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno task check
+      - run: deno task test
+
+  database:
+    name: Database (Supabase stack, lint, pgTAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start local Supabase (applies all migrations)
+        run: supabase start
+      - name: Lint the schema
+        run: supabase db lint --level error
+      - name: pgTAP (RLS guard, every policy, briefing acceptance cases)
+        run: supabase test db
+      - if: always()
+        run: supabase stop --no-backup

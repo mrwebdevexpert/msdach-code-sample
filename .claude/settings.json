@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(deno task check)",
+      "Bash(deno task test)",
+      "Bash(supabase test db)",
+      "Bash(./scripts/check_policy_coverage.sh)",
+      "Bash(./scripts/test-db-local.sh)",
+      "Bash(git diff:*)",
+      "Bash(git status)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__get_advisors"
+    ],
+    "deny": [
+      "Bash(supabase db push:*)",
+      "Bash(supabase functions deploy:*)",
+      "Bash(git push --force:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-migrations.sh" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit-check.sh", "timeout": 180 }]
+      }
+    ]
+  }
+}

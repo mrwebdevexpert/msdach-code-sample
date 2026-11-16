@@ -1,0 +1,5 @@
+project_id = "msdach-sample"
+
+# Callers authenticate with INTAKE_API_KEY (bearer), not a user JWT.
+[functions.inquiry-intake]
+verify_jwt = false

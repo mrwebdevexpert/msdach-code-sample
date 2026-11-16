@@ -1,0 +1,49 @@
+name: Claude code review
+
+# AI code review on every pull request. Claude reviews against CLAUDE.md,
+# comments inline, and writes its findings to a file; an open "high" finding
+# fails this check, which blocks the merge (branch protection).
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
+            Read CLAUDE.md first; its rules are binding. Use the rls-reviewer agent for every
+            change under supabase/migrations.
+            Check in particular:
+            - every new table has RLS enabled, policies, and a pgTAP test tagged "-- covers: <policy>";
+            - no applied migration is edited; no DELETE grants; SECURITY DEFINER pins search_path;
+            - the PR description names the briefing IDs, the modules and the flows/events (F…/E…);
+            - Edge Functions validate input, never log secrets or personal data, and are tested;
+            - visible program texts are German.
+            Post each finding as an inline comment with a severity: high, medium or low.
+            Finally write all findings as JSON to claude-review.json:
+            {"findings":[{"severity":"high|medium|low","file":"…","line":0,"summary":"…"}]}
+          claude_args: >-
+            --allowedTools "Read,Glob,Grep,Write,Task,Bash(git diff:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),mcp__github_inline_comment__create_inline_comment"
+
+      - name: Block on open high findings
+        run: |
+          test -f claude-review.json || { echo "No review output"; exit 1; }
+          high=$(jq '[.findings[] | select(.severity == "high")] | length' claude-review.json)
+          echo "High findings: $high"
+          jq -r '.findings[] | "\(.severity)\t\(.file):\(.line)\t\(.summary)"' claude-review.json
+          test "$high" -eq 0
