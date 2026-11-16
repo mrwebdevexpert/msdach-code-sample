@@ -26,6 +26,8 @@ jobs:
           # one of the two secrets is enough: API key (Console) or Claude subscription token
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # use the workflow's own token, so no GitHub App installation is needed
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
             Read CLAUDE.md first; its rules are binding. Use the rls-reviewer agent for every
