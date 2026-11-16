@@ -40,7 +40,8 @@ stop and ask in the PR; do not choose silently.
   never on `main`. No deploy from a laptop: migrations and functions only via CI.
 - Fill in `.github/pull_request_template.md`: briefing IDs, modules, flows (F…) and
   events (E…), DB changes, tests with result, risks.
-- AI review runs on every PR; an open **high** finding blocks the merge.
+- Before a PR is opened, the `rls-reviewer` agent reviews every migration change;
+  its **high** findings are fixed first.
 
 ## Language
 - Visible program texts are German. Code, comments, commits and PRs are English.

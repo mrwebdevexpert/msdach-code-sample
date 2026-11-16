@@ -16,7 +16,6 @@ is not taken from a client project and contains no client data.
 | `supabase/tests/02_policies.test.sql` | pgTAP (45): every one of the 20 policies with an allowed and a denied case, plus column privileges |
 | `supabase/functions/**/*_test.ts` | Deno tests (18): matching rules and the HTTP handler against a fake store |
 | `.github/workflows/ci.yml` | CI on every PR: guards, Deno fmt/lint/check/test, Supabase stack + `db lint` + `supabase test db` |
-| `.github/workflows/claude-review.yml` | Claude review on every PR; an open "high" finding fails the check |
 | `CLAUDE.md`, `.claude/` | Rules file, hooks, review subagent and permissions Claude Code works under |
 | `.mcp.json` | Supabase MCP server, read-only, on the staging project |
 | `scripts/` | Policy-coverage check, migration-immutability check, local pgTAP run without Docker |
@@ -70,7 +69,6 @@ is not taken from a client project and contains no client data.
 - **MCP:** Supabase MCP server in `--read-only` mode against staging, for schema
   questions and advisors.
 - **Subagent:** `.claude/agents/rls-reviewer.md` reviews every migration.
-- **Claude in CI:** `.github/workflows/claude-review.yml`.
 - **Guards in CI:** `scripts/check_policy_coverage.sh` fails if a policy has no test
   tagged `-- covers: <policy>`; `scripts/check_migrations_immutable.sh` fails if an
   applied migration is changed.

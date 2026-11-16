@@ -3,4 +3,3 @@
 .env.*
 supabase/.temp/
 supabase/.branches/
-claude-review.json
